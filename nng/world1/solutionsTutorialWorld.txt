@@ -1,0 +1,42 @@
+===============================================================================
+Level 1: The refl tactic.
+
+lemma example1 (x y z : mynat) : x * y + z = x * y + z :=
+
+begin
+    refl,
+
+end
+
+===============================================================================
+Level 2: The rewrite (rw) tactic.
+
+lemma example2 (x y : mynat) (h : y = x + 7) : 2 * y = 2 * (x + 7) :=
+
+begin
+    rw h,
+    refl,
+
+end
+===============================================================================
+Level 3: Peano's axioms.
+
+lemma example3 (a b : mynat) (h : succ a = b) : succ(succ(a)) = succ(b) :=
+
+begin
+    rw h,
+    refl,
+
+end
+===============================================================================
+Level 4: Addition.
+
+lemma add_succ_zero (a : mynat) : a + succ(0) = succ(a) :=
+
+begin
+    rw add_succ,
+    rw add_zero,
+    refl,
+
+end
+===============================================================================
