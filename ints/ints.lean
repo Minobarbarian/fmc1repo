@@ -13,8 +13,15 @@
   axiom Z_DistR (a b c : ℤ) : (a + b) * c = a * c + b * c
   axiom Z_NZD (a b : ℤ) : (a * b) = 0 → a = 0 ∨ b = 0
 
-  axiom ZP_A (x y > 0) : x + y > 0
-  axiom ZP_M (x y > 0) : x * y > 0
+  axiom ZP_A (a b > 0) : a + b > 0
+  axiom ZP_M (a b > 0) : a * b > 0
+  axiom ZP_Tri (a > 0) : (a = 0 ∧ (a < 0 → false) ∧ (a > 0 → false)) ∨ (a > 0 ∧ (a < 0 → false) ∧ (a = 0 → false)) ∨ (a < 0 ∧ (a > 0 → false) ∧ (a = 0 → false))
+
+------------------------------------------------
+-- Definições:
+------------------------------------------------
+  def leq (x y : ℤ) := x < y ∨ x = y
+  def abs (x x' : ℤ) := ((x > 0) → x' = x) ∧ ((x = 0) → x' = x) ∧ ((x < 0) → x' = -x)
 
 ------------------------------------------------
 -- Lemmas da Esquerda:
@@ -380,7 +387,7 @@
       have h2: a = b := h1 h,
       exact h2,
     end
-  theorem ZM_CanR: ∀ (a b c : ℤ), a * c = b * c →  c = 0 ∨ a = b :=
+  theorem ZM_CanR: ∀ (a b c : ℤ), a * c = b * c → c = 0 ∨ a = b :=
     begin
       intros a b c h,
       have h1: (a + (-b)) * c = 0,
@@ -402,34 +409,68 @@
       left,
       exact hc,
     end
+  theorem ZM_CanL: ∀ (a b c : ℤ), c * a = c * b → c = 0 ∨ a = b :=
+    begin
+      intros a b c h,
+      have h1: a * c = b * c → c = 0 ∨ a = b := ZM_CanR a b c,
+      rw ←ZM_Com a c at h,
+      rw ←ZM_Com b c at h,
+      have h2: c = 0 ∨ a = b := h1 h,
+      exact h2,
+    end
 ------------------------------------------------
--- Unicidades:
+-- Existências e Unicidades:
 ------------------------------------------------
-  theorem ZA_IdUni: ∀ (a b: ℤ), (∃ x : ℤ, a + x = a) ∧ ((a + b = a) ∧ (b + a = a) → b = 0):=
+  theorem ZA_ResExi: ∀ (a b: ℤ), (∃ x : ℤ, a + x = b) :=
     begin
       intros a b,
-      split,
+      existsi (-a + b),
+      rw ←ZA_Ass a (-a) b,
+      rw ←ZA_invR,
+      rw ←ZA_idL,
+    end
+  theorem ZA_ResUni: ∀ (a b x y: ℤ), ((a + x = b) ∧ (a + y = b)) → x = y :=
+    begin
+      intros a b x y h,
+      cases h,
+      have h: a + x = a + y,
+      conv{
+        to_lhs,
+        rw h_left,
+        rw ←h_right,
+      },
+      have h1: a + x = a + y → x = y := ZA_CanL x y a,
+      have h2: x = y := h1 h,
+      exact h2,
+    end
+  theorem ZA_IdExi: ∀ (a : ℤ), ∃ x : ℤ, a + x = a:=
+    begin
+      intro a,
       existsi (a + (-a)),
       rw ←ZA_invR,
       rw ←ZA_idR,
-      intro h,
-      cases h with hab hba,
-      have h: (a + b) = a ↔ (a + b) + (-a) = 0 := ZA_polt (a + b) a,
-      cases h,
-      have h2: (a + b) + (-a) = 0 := h_mp hab,
-      conv{
-        to_rhs,
-        rw ←h2,
-        rw ZA_Com,
-        rw ←ZA_Ass,
-        rw ←ZA_invL,
-        rw ←ZA_idL,
-      },
     end
-  theorem ZM_IdUni: ∀ (a b: ℤ), (∃ x : ℤ, a * x = a) ∧ ((a * b = a) ∧ (b * a = a) → b = 1):=
+  theorem ZA_IdUni: ∀ (a b: ℤ), ((a + b = a) ∧ (b + a = a)) → b = 0 :=
     begin
-      intros a b,
+      intros a b h,
+      cases h with hab hba,
+      have h: a + 0 = a,
+      have h1: a = a + 0 := ZA_idR a,
+      conv{
+        to_lhs,
+        rw ←ZA_idR,
+      },
+      have h1: ((a + b = a) ∧ (a + 0 = a)) → b = 0 := ZA_ResUni a a b 0,
+      have h2: (a + b = a) ∧ (a + 0 = a),
       split,
+      exact hab,
+      exact h,
+      have h3: (b = 0) := h1 h2,
+      exact h3,
+    end
+  theorem ZM_IdExi: ∀ (a : ℤ), ∃ x : ℤ, a * x = a:=
+    begin
+      intro a,
       existsi (1 + (a + (-a))),
       conv{
         to_lhs,
@@ -437,21 +478,27 @@
         rw ←ZA_idR,
         rw ←ZM_idR,
       },
-      intro h,
-      cases h with hab hba,
+    end
+  theorem ZM_IdUni: ∀ (a u v: ℤ), ((a * u = a) ∧ (a * v = a)) → u = v :=
+    begin
+      intros a u v h,
+      cases h with hau hav,
+      have hv: v * u = v,
       sorry,
     end
-  theorem ZA_InvUni: ∀ (x : ℤ), (∃ k : ℤ, x + k = 0) ∧ (∀ (u : ℤ), (u + x = 0 ∧ x + u = 0) → u = -x) :=
+  theorem ZA_InvExi: ∀ (x : ℤ), (∃ k : ℤ, x + k = 0) :=
     begin
       intro x,
-      split,
       existsi (0 + (-x)),
       conv{
         to_lhs,
         rw ←ZA_idL (-x),
         rw ←ZA_invR x,
       },
-      intros u h,
+    end
+  theorem ZA_InvUni: ∀ (x u : ℤ), ((u + x = 0) ∧ (x + u = 0)) → u = -x :=
+    begin
+      intros x u h,
       cases h with ux xu,
       have h: (x + u) = 0 → (x + u) + (-x) = 0 + (-x) := ZA_PF (x + u) 0 (-x),
       have h1: (x + u) + (-x) = 0 + (-x) := h xu,
@@ -462,29 +509,6 @@
       rw ←ZA_idL u at h1,
       rw ←ZA_idL (-x) at h1,
       exact h1,
-    end
-  theorem ZA_ResUni: ∀ (a b: ℤ), (∃ x : ℤ, a + x =b) ∧ (∀ (x y: ℤ), (a + x = b) ∧ (a + y = b) → x = y) :=
-    begin
-      intros a b,
-      split,                            -- Existência
-      existsi (-a + b),
-      rw ←ZA_Ass a (-a) b,
-      rw ←ZA_invR,
-      rw ←ZA_idL,                       -- Fim de Existência
-      intros x y h,                     -- Unicidade
-      cases h with hax hay,
-      have h: a + x = a + y,
-      conv{
-        to_lhs,
-        rw hax,
-      },
-      conv{
-        to_rhs,
-        rw hay,
-      },
-      have h1: a + x = a + y → x = y := ZA_CanL x y a,
-      have h2: x = y := h1 h,
-      exact h2,                         -- Fim da Unicidade
     end
 ------------------------------------------------
 -- Z_NZD pelo ZM_CanR:
@@ -520,15 +544,138 @@
       rw ZM_AnR,
       rw ZM_AnL,
     end
-  theorem ZD_p3: ∀ (a b x : ℤ), (∃ k : ℤ, b = k * a) → ∃ l : ℤ, b * x = l * a :=
+  theorem ZD_p3: ∀ (a b x : ℤ), (∃ k : ℤ, b = k * a) → (∃ l : ℤ, b * x = l * a) :=
     begin
       intros a b x,
       intro h,
       cases h with k hb,
-      existsi k,
+      existsi (k * x),
+      conv{
+        to_lhs,
+        rw hb,
+        rw ZM_Ass,
+        rw ZM_Com a x,
+        rw ←ZM_Ass,
+      },
+    end
+  theorem ZD_p4: ∀ (a b : ℤ), (∃ k : ℤ, b = a * k) → (∃ l : ℤ, (-b) = a * l) ∧ (∃ m : ℤ, b = (-a) * m) :=
+    begin
+      intros a b h,
+      cases h with k h,
+      split,
+      existsi (-k),
       conv{
         to_rhs,
-        rw ←hb,
+        rw ZS_MNegD,
+        rw ←h,
       },
+      existsi (-k),
+      conv{
+        to_rhs,
+        rw ZS_PNeg,
+        rw ←h,
+      },
+    end
+  theorem ZD_p5: ∀ (a b c: ℤ), (∃ k : ℤ, b = a * k) ∧ (∃ l : ℤ, c = a * l) → (∃ m : ℤ, b + c = a * m) :=
+    begin
+      intros a b c h,
+      cases h with hek hel,
+      cases hek with k hk,
+      cases hel with l hl,
+      existsi (k + l),
+      conv{
+        to_rhs,
+        rw Z_DistL,
+        rw ←hk,
+        rw ←hl,
+      },
+    end
+  theorem ZD_p6: ∀ (a b c x y: ℤ), (∃ k : ℤ, b = a * k) ∧ (∃ l : ℤ, c = a * l) → (∃ m : ℤ, b * x + c * y = a * m) :=
+    begin
+      intros a b c x y h,
+      cases h with hek hel,
+      cases hek with k hk,
+      cases hel with l hl,
+      existsi (k * x + l * y),
+      conv{
+        to_rhs,
+        rw Z_DistL,
+        congr,
+        rw ZM_Com k x,
+        rw ←ZM_Ass,
+        rw ZM_Com,
+        skip,
+        rw ZM_Com l y,
+        rw ←ZM_Ass,
+        rw ZM_Com,
+      },
+      conv{
+        to_lhs,
+        congr,
+        rw hk,
+        rw ZM_Com a k,
+        rw ZM_Ass,
+        skip,
+        rw hl,
+        rw ZM_Com a l,
+        rw ZM_Ass,
+      },
+    end
+  theorem ZD_p7: ∀ (a b a' b': ℤ), ((∃ k : ℤ, b = a * k) ∧ (b = 0 → false)) → leq (abs a a') (abs b b') :=
+    begin
+
+    end
+  theorem ZD_p8: ∀ (a b c: ℤ), ((c = 0) → false) → ((∃ k : ℤ, b = a * k) ↔ (∃ l : ℤ, c * b = (c * a) * l)) :=
+    begin
+      intros a b c hnc,
+      split,
+      intro hek,
+      cases hek with k hk,
+      existsi (1 + (k +(-k))),
+      conv{
+        to_rhs,
+        rw ←ZA_invR k,
+        rw ←ZA_idR 1,
+        rw ←ZM_idR (c * a),
+      },
+      sorry,
+      sorry,
+    end
+  theorem ZD_Refl: ∀ (a: ℤ), (∃ k : ℤ, a = a * k) :=
+    begin
+      intro a,
+      existsi (1 + (a +(-a))),
+      conv{
+        to_rhs,
+        rw ←ZA_invR a,
+        rw ←ZA_idR 1,
+        rw ←ZM_idR a,
+      },
+    end
+  theorem ZD_Trans: ∀ (a b c: ℤ), (∃ k : ℤ, b = a * k) ∧ (∃ l : ℤ, c = b * l) → (∃ m : ℤ, c = a * m) :=
+    begin
+      intros a b c h,
+      cases h with hek hel,
+      cases hek with k hk,
+      cases hel with l hl,
+      have h1: c = a * (k * l),
+      conv{
+        to_rhs,
+        rw ←ZM_Ass,
+        rw ←hk,
+        rw ←hl,
+      },
+      existsi (k * l),
+      exact h1,
+    end
+------------------------------------------------
+-- Teoremas de Ordem:
+------------------------------------------------
+  theorem ZO_Trans: ∀ (a b c : ℤ), ((b - a) > 0) ∧ ((c - b) > 0) → ((c - a) > 0) :=
+    begin
+      intros a b c h,
+      cases h with hab hbc,
+      have h: (b - a) + (c - b) > 0,
+      sorry,
       sorry,
     end
