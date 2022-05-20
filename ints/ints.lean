@@ -717,9 +717,9 @@
 ------------------------------------------------
 -- Irredutível, Primo e Prime:
 ------------------------------------------------
-  theorem Z_IrredPrime: ∀ (a b p : ℤ), (p = a * b → (unit' a ∨ unit' b)) ↔ ((∃ k : ℤ, a * b = p * k) → unit' a ∨ unit' b) :=
+  theorem Z_IrredPrime: ∀ (a b p : ℤ), (p = 0 → false) → ((p = a * b → (unit' a ∨ unit' b)) ↔ ((∃ k : ℤ, a * b = p * k) → unit' a ∨ unit' b)) :=
     begin
-      intros a b p,
+      intros a b p hnp0,
       split,
       intro h,
       intro hek,
@@ -738,7 +738,10 @@
         rw h1,
       },
     end
-  theorem Z_IrredPrimo: ∀ (a b p : ℤ), (p = a * b → (unit' a ∨ unit' b)) ↔ (∀ (x : {1, (-1), p, (-p)}), (∃ k : ℤ, p = x * k)) :=
+  theorem Z_IrredPrimo: ∀ (a b p : ℤ), (p = 0 → false) → ((p = a * b → (unit' a ∨ unit' b)) ↔ (∀ (x : ℤ), (∃ k : ℤ, p = x * k))) :=
     begin
+      intros a b p hnp0,
+      split,
+      intros h x,
 
     end
