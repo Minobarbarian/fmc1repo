@@ -15,14 +15,20 @@
 
   axiom ZP_A (a b > 0) : a + b > 0
   axiom ZP_M (a b > 0) : a * b > 0
-  axiom ZP_Tri (a > 0) : (a = 0 ∧ (a < 0 → false) ∧ (a > 0 → false)) ∨ (a > 0 ∧ (a < 0 → false) ∧ (a = 0 → false)) ∨ (a < 0 ∧ (a > 0 → false) ∧ (a = 0 → false))
+  axiom ZP_Tri (a : ℤ) : (a = 0) ∨ (a > 0) ∨ (a < 0)
+  axiom ZP_Tri' (a : ℤ) : (a = 0 ∧ ¬(a < 0) ∧ ¬(a > 0)) ∨ (a > 0 ∧ ¬(a < 0) ∧ ¬(a = 0)) ∨ (a < 0 ∧ ¬(a > 0) ∧ ¬(a = 0))
 
 ------------------------------------------------
 -- Definições:
 ------------------------------------------------
-  def leq (x y : ℤ) := x < y ∨ x = y
-  def abs (x x' : ℤ) := ((x > 0) → x' = x) ∧ ((x = 0) → x' = x) ∧ ((x < 0) → x' = -x)
-
+  
+  def abs (x : ℤ) := if (x > 0 ∨ x = 0) then x else -x
+  notation | x | := abs x
+  def applyabs (x : ℤ) := | x | = abs x
+  notation x < y := 0 < (y + (-x))
+  def unit' (x : ℤ) := ∃ k : ℤ, x * k = 1
+  def is_ZM_idR (w : ℤ) := ∀ (a : ℤ), a * w = a
+  
 ------------------------------------------------
 -- Lemmas da Esquerda:
 ------------------------------------------------
@@ -59,7 +65,7 @@
 ------------------------------------------------
 -- Lemmas Extras:
 ------------------------------------------------
-  lemma ZA_PF: ∀ (a b u: ℤ), a = b → a + u = b + u :=
+  lemma ZA_PF: ∀ (a b u : ℤ), a = b → a + u = b + u :=
     begin
       intros a b u h,
       have h1: a + u = a + u,
@@ -69,7 +75,7 @@
         rw ←h,
       },
     end
-  lemma ZA_Trans: ∀ (a b c : ℤ), (a = c ∧ b = c) → a = b :=
+  lemma Z_Trans: ∀ (a b c : ℤ), (a = c ∧ b = c) → a = b :=
     begin
       intros a b c,
       intro h,
@@ -479,12 +485,14 @@
         rw ←ZM_idR,
       },
     end
-  theorem ZM_IdUni: ∀ (a u v: ℤ), ((a * u = a) ∧ (a * v = a)) → u = v :=
+  theorem ZM_IdUni: ∀ (a u v: ℤ), (is_ZM_idR u ∧ is_ZM_idR v) → u = v :=
     begin
       intros a u v h,
-      cases h with hau hav,
-      have hv: v * u = v,
-      sorry,
+      cases h with hu hv,
+      calc
+        u = u * v : by rw [hv u]
+      ... = v * u : by rw [ZM_Com v u]
+      ... = v : by rw [hu v],
     end
   theorem ZA_InvExi: ∀ (x : ℤ), (∃ k : ℤ, x + k = 0) :=
     begin
@@ -621,9 +629,22 @@
         rw ZM_Ass,
       },
     end
-  theorem ZD_p7: ∀ (a b a' b': ℤ), ((∃ k : ℤ, b = a * k) ∧ (b = 0 → false)) → leq (abs a a') (abs b b') :=
+  theorem ZD_p7: ∀ (a b: ℤ), ((∃ k : ℤ, b = a * k) ∧ (b = 0 → false)) → (|a|) < (|b|) ∨ (|a|) = (|b|) :=
     begin
-
+      intros a b h,
+      cases h,
+      cases h_left with k hk,
+      have h: (a = 0) ∨ (a > 0) ∨ (a < 0) := ZP_Tri a,
+      have h1: (b = 0) ∨ (b > 0) ∨ (b < 0) := ZP_Tri b,
+      cases h,
+      cases h1,
+      contradiction,
+      cases h1,
+      have h2: a > 0 ∨ a = 0,
+      right,
+      exact h,
+      left,
+      show (|a|) < (|b|),
     end
   theorem ZD_p8: ∀ (a b c: ℤ), ((c = 0) → false) → ((∃ k : ℤ, b = a * k) ↔ (∃ l : ℤ, c * b = (c * a) * l)) :=
     begin
@@ -631,15 +652,37 @@
       split,
       intro hek,
       cases hek with k hk,
-      existsi (1 + (k +(-k))),
+      existsi (k),
+      conv{
+        to_lhs,
+        rw hk,
+        rw ←ZM_Ass,
+      },
+      intro hel,
+      cases hel with l hl,
+      have h: c * (b + -(a * l)) = 0,
+      conv{
+        to_lhs,
+        rw Z_DistL,
+        rw ZS_MNegD,
+        rw ←ZM_Ass,
+        rw hl,
+        rw ←ZA_invR,
+      },
+      have h1: (c * (b + -(a * l))) = 0 → c = 0 ∨ (b + -(a * l)) = 0 := Z_NZD c (b + -(a * l)),
+      have h2: c = 0 ∨ (b + -(a * l)) = 0 := h1 h,
+      cases h2,
+      contradiction,
+      existsi l,
       conv{
         to_rhs,
-        rw ←ZA_invR k,
-        rw ←ZA_idR 1,
-        rw ←ZM_idR (c * a),
+        rw ZA_idR (a * l),
+        rw ←h2,
+        rw ZA_Com b (-(a * l)),
+        rw ←ZA_Ass (a * l) (-(a * l)) (b),
+        rw ←ZA_invR,
+        rw ←ZA_idL b,
       },
-      sorry,
-      sorry,
     end
   theorem ZD_Refl: ∀ (a: ℤ), (∃ k : ℤ, a = a * k) :=
     begin
@@ -671,11 +714,31 @@
 ------------------------------------------------
 -- Teoremas de Ordem:
 ------------------------------------------------
-  theorem ZO_Trans: ∀ (a b c : ℤ), ((b - a) > 0) ∧ ((c - b) > 0) → ((c - a) > 0) :=
+------------------------------------------------
+-- Irredutível, Primo e Prime:
+------------------------------------------------
+  theorem Z_IrredPrime: ∀ (a b p : ℤ), (p = a * b → (unit' a ∨ unit' b)) ↔ ((∃ k : ℤ, a * b = p * k) → unit' a ∨ unit' b) :=
     begin
-      intros a b c h,
-      cases h with hab hbc,
-      have h: (b - a) + (c - b) > 0,
+      intros a b p,
+      split,
+      intro h,
+      intro hek,
+      cases hek with k hk,
+      apply h,
       sorry,
-      sorry,
+      intro h,
+      intro h1,
+      apply h,
+      existsi (1 + (a + (-a))),
+      conv{
+        to_rhs,
+        rw ←ZA_invR a,
+        rw ←ZA_idR 1,
+        rw ←ZM_idR p,
+        rw h1,
+      },
+    end
+  theorem Z_IrredPrimo: ∀ (a b p : ℤ), (p = a * b → (unit' a ∨ unit' b)) ↔ (∀ (x : {1, (-1), p, (-p)}), (∃ k : ℤ, p = x * k)) :=
+    begin
+
     end
